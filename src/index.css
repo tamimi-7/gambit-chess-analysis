@@ -1,0 +1,57 @@
+@import 'tailwindcss';
+@import '@fontsource-variable/inter';
+@import '@fontsource-variable/jetbrains-mono';
+
+/* ---------------------------------------------------------------
+   Design tokens — exposed to Tailwind as utilities
+   (bg-board-dark, text-accent-400, font-mono, ...).
+---------------------------------------------------------------- */
+@theme {
+  --font-sans: 'Inter Variable', ui-sans-serif, system-ui, sans-serif;
+  --font-mono: 'JetBrains Mono Variable', ui-monospace, SFMono-Regular, monospace;
+
+  /* Board */
+  --color-board-light: #ebecd0;
+  --color-board-dark: #6f9c50;
+  --color-board-highlight: #f7d26a;
+
+  /* Accent — active states, engine "best" markers */
+  --color-accent-300: #b6ef8a;
+  --color-accent-400: #96e061;
+  --color-accent-500: #74c142;
+  --color-accent-600: #5a9a33;
+
+  /* Evaluation bar */
+  --color-eval-white: #f2f2f0;
+  --color-eval-black: #1b1d21;
+}
+
+@layer base {
+  html {
+    color-scheme: dark;
+  }
+
+  body {
+    @apply bg-slate-950 text-slate-300 antialiased;
+    /* Subtle top-down vignette so panels read as elevated surfaces. */
+    background-image: radial-gradient(
+      120% 80% at 50% -10%,
+      rgb(30 41 59 / 0.55) 0%,
+      transparent 60%
+    );
+    background-attachment: fixed;
+  }
+
+  /* Slim scrollbars inside the analysis panel. */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-slate-700) transparent;
+  }
+}
+
+@layer components {
+  /* Uppercase micro-labels used across panel headers. */
+  .label-micro {
+    @apply font-mono text-[10px] font-medium uppercase tracking-[0.18em] text-slate-500;
+  }
+}
