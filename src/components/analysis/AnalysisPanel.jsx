@@ -4,7 +4,7 @@ import MoveList from './MoveList'
 import ReviewPanel from './ReviewPanel'
 import MoveExplanation from './MoveExplanation'
 import useSpeech from '../../hooks/useSpeech'
-import { explainMove } from '../../lib/explain'
+import { explainMove, explainMoveEn } from '../../lib/explain'
 
 function FenBar({ fen }) {
   const [copied, setCopied] = useState(false)
@@ -70,7 +70,10 @@ export default function AnalysisPanel({
   const running = review.progress.state === 'running' || review.progress.state === 'loading'
 
   const currentEntry = review.byPly?.[activePly] ?? null
-  const explanation = explainMove(currentEntry, { openingName: review.report?.opening?.name })
+  const openingName = review.report?.opening?.name
+  const explanation = explainMove(currentEntry, { openingName })
+  // Spoken aloud in English regardless of the display language — see useSpeech.
+  const spokenExplanation = explainMoveEn(currentEntry, { openingName })
   const speech = useSpeech()
 
   // Reading the wrong move's explanation because the player kept navigating
@@ -108,7 +111,7 @@ export default function AnalysisPanel({
         text={explanation}
         speaking={speech.speaking}
         supported={speech.supported}
-        onToggleSpeech={() => (speech.speaking ? speech.stop() : speech.speak(explanation))}
+        onToggleSpeech={() => (speech.speaking ? speech.stop() : speech.speak(spokenExplanation))}
       />
 
       <MoveList

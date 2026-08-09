@@ -20,6 +20,23 @@ const IDLE = { state: 'idle', done: 0, total: 0 }
 const SUSPECT = new Set(['inaccuracy', 'mistake', 'miss', 'blunder', 'brilliant', 'great'])
 
 /**
+ * Pass 1 is a fixed, cheap triage over *every* position — its only job is to
+ * place each move in roughly the right bucket. Pass 2 then spends the user's
+ * chosen time budget re-examining only the moves that looked interesting,
+ * which is where accuracy is actually decided. Scaling pass 1 with the
+ * preset — the original design — meant "Balanced"/"Deep" paid full price on
+ * hundreds of positions that were never going to be flagged; that was by far
+ * the biggest cost in a review, for no accuracy benefit.
+ */
+export const SCAN_MOVETIME = 200
+const SCAN_DEPTH = 18
+
+// Book theory always grades as 'book' regardless of its eval — the number is
+// only there to keep the win% graph continuous, so it doesn't need precision.
+export const BOOK_MOVETIME = 60
+const BOOK_DEPTH = 10
+
+/**
  * A checkmated or stalemated position produces no engine lines at all
  * (`bestmove (none)`), which would otherwise read as 0.00 and make the mating
  * move itself look like a catastrophic blunder.
@@ -78,7 +95,7 @@ export default function useGameReview() {
     setProgress(IDLE)
   }, [])
 
-  const run = useCallback(async (fens, history, { depth = 24, movetime = 500 } = {}) => {
+  const run = useCallback(async (fens, history, { depth = 24, movetime = 900 } = {}) => {
     if (history.length === 0) return
 
     cancelRef.current = false
@@ -200,12 +217,16 @@ export default function useGameReview() {
       return plies
     }
 
-    // --- pass 1: scan the whole game --------------------------------------
+    // --- pass 1: cheap triage over the whole game ---------------------------
+    // Budget is fixed, not tied to the preset — see the constants above.
     setProgress({ state: 'running', phase: 'scan', done: 0, total: fens.length })
 
     for (let i = 0; i < fens.length; i++) {
       if (cancelRef.current) return
-      if (!(await scan(i, movetime, depth))) {
+      const isBook = i <= lastBookPly
+      const budget = isBook ? BOOK_MOVETIME : SCAN_MOVETIME
+      const depthCap = isBook ? BOOK_DEPTH : SCAN_DEPTH
+      if (!(await scan(i, budget, depthCap))) {
         failed = true
         break
       }
@@ -219,12 +240,13 @@ export default function useGameReview() {
       return
     }
 
-    // --- pass 2: verify the verdicts that actually matter ------------------
+    // --- pass 2: spend the real budget only on moves that matter -----------
     //
-    // A fixed time budget is not enough in sharp positions: the engine may see
-    // a mate before a move and not after it, which turns a perfectly good move
-    // into a "mistake". Re-examining only the flagged moves, with a much
-    // larger budget, fixes those without paying for the whole game twice.
+    // A shallow triage pass is also not enough in sharp positions: the engine
+    // may see a mate before a move and not after it, which turns a perfectly
+    // good move into a "mistake". Re-examining only the flagged moves, with
+    // the user's chosen budget, fixes those without paying full price on the
+    // whole game.
     const suspects = new Set()
     for (const ply of grade()) {
       if (SUSPECT.has(ply.classification)) {
@@ -238,7 +260,7 @@ export default function useGameReview() {
 
     for (let n = 0; n < toVerify.length; n++) {
       if (cancelRef.current) return
-      if (!(await scan(toVerify[n], movetime * 4, depth + 4))) {
+      if (!(await scan(toVerify[n], movetime, depth))) {
         failed = true
         break
       }

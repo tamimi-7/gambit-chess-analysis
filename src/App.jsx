@@ -11,9 +11,11 @@ import useGameReview from './hooks/useGameReview'
 export default function App() {
   const [orientation, setOrientation] = useState('white')
   const [engineOn, setEngineOn] = useState(true)
-  const [multiPv, setMultiPv] = useState(3)
+  // One line by default — three engine lines at once is a lot to take in;
+  // the Lines control still lets anyone who wants more turn it up.
+  const [multiPv, setMultiPv] = useState(1)
   const [targetDepth, setTargetDepth] = useState(24)
-  const [reviewPreset, setReviewPreset] = useState({ movetime: 500, depth: 24 })
+  const [reviewPreset, setReviewPreset] = useState({ movetime: 900, depth: 24 })
   const [tab, setTab] = useState('engine')
   const [pgnOpen, setPgnOpen] = useState(false)
   const [playerOpen, setPlayerOpen] = useState(false)

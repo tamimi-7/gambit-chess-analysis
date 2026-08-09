@@ -1,22 +1,34 @@
 import { CLASS_ORDER, CLASSES } from '../../lib/classify'
+import { SCAN_MOVETIME } from '../../hooks/useGameReview'
 import MoveBadge from './MoveBadge'
 import EvalGraph from './EvalGraph'
 
 /**
- * Time per position, not depth. A fixed depth costs wildly different amounts
- * of time depending on how sharp the position is — a quiet endgame reaches
- * depth 22 instantly while a tactical middlegame can take ten seconds — so a
- * depth-based review has no predictable runtime. A time budget does, and the
- * depth cap still stops the engine wasting the budget on a dead position.
+ * Time per position, not depth — a fixed depth costs wildly different
+ * amounts of time depending on how sharp the position is, so a depth-based
+ * review has no predictable runtime.
+ *
+ * The preset only sets the *verify* budget (how thoroughly the moves that
+ * looked interesting get re-examined); the first sweep over every position
+ * is always cheap and fixed (see useGameReview's SCAN_MOVETIME) — that pass
+ * only has to place a move in roughly the right bucket, not be precise about
+ * it, and it used to be the single biggest cost in a review for no accuracy
+ * benefit.
  */
 const PRESETS = [
-  { label: 'Fast', movetime: 150, depth: 20 },
-  { label: 'Balanced', movetime: 500, depth: 24 },
-  { label: 'Deep', movetime: 1500, depth: 28 },
+  { label: 'Fast', movetime: 500, depth: 20 },
+  { label: 'Balanced', movetime: 900, depth: 24 },
+  { label: 'Deep', movetime: 2000, depth: 28 },
 ]
 
+// Rough share of a game's moves that end up flagged for a closer look —
+// loose average across real games; only used for the "~Xs" hint below.
+const SUSPECT_SHARE = 0.3
+
 const estimate = (movetime, plies) => {
-  const seconds = Math.round((movetime * (plies + 1)) / 1000)
+  const scan = SCAN_MOVETIME * (plies + 1)
+  const verify = movetime * (plies + 1) * SUSPECT_SHARE
+  const seconds = Math.round((scan + verify) / 1000)
   return seconds < 90 ? `~${seconds}s` : `~${Math.round(seconds / 60)}m`
 }
 
