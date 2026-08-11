@@ -11,8 +11,26 @@ function MoveCell({ san, ply, active, review, onSelect }) {
   const ref = useRef(null)
 
   // Keep the move under review visible while navigating with the keyboard.
+  //
+  // Deliberately not `scrollIntoView`: that scrolls *every* scrollable
+  // ancestor, the page included. On a phone the move list sits below the
+  // board, so each move dragged the whole page down off the board. Only the
+  // list's own scroller should move, and only when the move is out of sight.
   useEffect(() => {
-    if (active) ref.current?.scrollIntoView({ block: 'nearest' })
+    if (!active) return
+
+    const cell = ref.current
+    const scroller = cell?.closest('[data-move-scroller]')
+    if (!cell || !scroller) return
+
+    const cellBox = cell.getBoundingClientRect()
+    const scrollerBox = scroller.getBoundingClientRect()
+
+    if (cellBox.top < scrollerBox.top) {
+      scroller.scrollTop -= scrollerBox.top - cellBox.top
+    } else if (cellBox.bottom > scrollerBox.bottom) {
+      scroller.scrollTop += cellBox.bottom - scrollerBox.bottom
+    }
   }, [active])
 
   if (!san) return <span />
@@ -53,7 +71,7 @@ export default function MoveList({ moves = [], activePly = -1, review = null, on
         <span className="font-mono text-[10px] text-slate-600">{moves.length} plies</span>
       </div>
 
-      <div className="min-h-0 flex-1 overflow-y-auto p-1.5">
+      <div data-move-scroller className="min-h-0 flex-1 overflow-y-auto p-1.5">
         {rows.length === 0 && (
           <p className="px-2 py-3 text-[12px] text-slate-600">
             Play a move or import a PGN to start.
