@@ -126,6 +126,24 @@ It prefers an Arabic voice (`ar-SA`) if the OS has one installed; otherwise
 the browser's default voice reads it. Switching moves cuts off anything still
 being read, so it never narrates the wrong position.
 
+## What persists
+
+React state is browser memory for one page load — a refresh returns every
+`useState` to its initial value. Two things are expensive enough to lose that
+they are written to **IndexedDB** (`src/lib/storage.js`):
+
+- **The current session** — game, position and imported metadata, so a refresh
+  puts you back where you were. Cleared by the reset button.
+- **Review reports**, keyed by a hash of the exact move sequence. Reviewing a
+  game costs 25–60s of full-core search; reopening one already analysed brings
+  its report straight back, badges and all. Kept across resets.
+
+IndexedDB rather than localStorage: a report for a long game is tens of
+kilobytes, a library of them would pass localStorage's ~5 MB ceiling, and
+localStorage writes are synchronous — they would stall the very UI thread the
+engine was moved off. Storage failures (private browsing, tightened settings)
+are caught and ignored; the board keeps working without it.
+
 ## Layout
 
 ```

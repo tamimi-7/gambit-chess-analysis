@@ -100,7 +100,27 @@ export default function useChessGame() {
     setPlayers(DEFAULT_PLAYERS)
   }, [])
 
-  const loadPgn = useCallback((pgn) => {
+  /**
+   * Serialise the game back out as PGN. Rebuilt on demand rather than kept in
+   * state: it is only needed when something leaves the app (saving a session,
+   * copying a game out), and keeping it in sync on every move would be work
+   * done for nothing on the overwhelming majority of renders.
+   */
+  const getPgn = useCallback(() => {
+    const game = new Chess()
+    for (const move of history) game.move(move.san)
+
+    if (players.white !== 'White') game.setHeader('White', players.white)
+    if (players.black !== 'Black') game.setHeader('Black', players.black)
+    if (players.whiteElo) game.setHeader('WhiteElo', String(players.whiteElo))
+    if (players.blackElo) game.setHeader('BlackElo', String(players.blackElo))
+    if (players.result) game.setHeader('Result', players.result)
+
+    return game.pgn()
+  }, [history, players])
+
+  /** `atPly` restores a saved position; without it the game opens at the end. */
+  const loadPgn = useCallback((pgn, atPly) => {
     // Pasted PGN routinely carries a UTF-8 BOM (files saved on Windows) or
     // non-breaking spaces (copied from a web page); the parser rejects both.
     const cleaned = pgn
@@ -132,7 +152,9 @@ export default function useChessGame() {
 
     setFens(nextFens)
     setHistory(moves)
-    setPly(moves.length)
+    // Clamped here rather than by goTo: goTo closes over the *previous* fens,
+    // so calling it right after a load would clamp against the old game.
+    setPly(atPly == null ? moves.length : Math.max(0, Math.min(moves.length, atPly)))
   }, [])
 
   /** Legal destinations from a square, in the *currently displayed* position. */
@@ -184,6 +206,7 @@ export default function useChessGame() {
     canGoForward: ply < fens.length - 1,
     makeMove,
     playMoves,
+    getPgn,
     movesFrom,
     goTo,
     undo,

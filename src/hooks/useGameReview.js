@@ -3,6 +3,7 @@ import { Chess } from 'chess.js'
 import StockfishEngine from '../engine/StockfishEngine'
 import { toWhitePov } from '../engine/uci'
 import { bookPrefix, loadOpenings, lookupOpening } from '../lib/openings'
+import { loadReview, movesKey, saveReview } from '../lib/storage'
 import {
   CLASS_ORDER,
   classifyMove,
@@ -93,6 +94,23 @@ export default function useGameReview() {
   const clear = useCallback(() => {
     setReport(null)
     setProgress(IDLE)
+  }, [])
+
+  /**
+   * Bring back a previously computed report for this exact move sequence.
+   * Reviewing a game costs half a minute of full-core search; paying that
+   * again for a game already analysed is the difference between a tool and a
+   * demo. Returns true when a report was found.
+   */
+  const restore = useCallback(async (sanList) => {
+    if (!sanList?.length) return false
+
+    const stored = await loadReview(movesKey(sanList))
+    if (!stored) return false
+
+    setReport(stored)
+    setProgress({ state: 'done', done: 0, total: 0, cached: true })
+    return true
   }, [])
 
   const run = useCallback(async (fens, history, { depth = 24, movetime = 900 } = {}) => {
@@ -290,7 +308,7 @@ export default function useGameReview() {
     }
     for (const ply of plies) summary[ply.color][ply.classification] += 1
 
-    setReport({
+    const finished = {
       plies,
       summary,
       opening,
@@ -304,11 +322,17 @@ export default function useGameReview() {
         w: gameAccuracy(accuracies.w, winPercents),
         b: gameAccuracy(accuracies.b, winPercents),
       },
-    })
+    }
+
+    setReport(finished)
     setProgress({ state: 'done', done: fens.length, total: fens.length })
+
+    // Keyed by the move sequence, so this exact game never has to be searched
+    // twice. Fire and forget — a storage failure must not fail the review.
+    saveReview(movesKey(history.map((move) => move.san)), finished)
   }, [])
 
-  return { progress, report, run, cancel, clear }
+  return { progress, report, run, cancel, clear, restore }
 }
 
 /** SAN for the engine's preferred move, so the UI can say "Nf3 was best". */

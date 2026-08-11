@@ -7,6 +7,7 @@ import AnalysisPanel from './components/analysis/AnalysisPanel'
 import useChessGame from './hooks/useChessGame'
 import useEngine from './hooks/useEngine'
 import useGameReview from './hooks/useGameReview'
+import { clearSession, loadSession, saveSession } from './lib/storage'
 
 export default function App() {
   const [orientation, setOrientation] = useState('white')
@@ -48,10 +49,60 @@ export default function App() {
     setTab('review')
   }
 
+  // --- persistence ------------------------------------------------------
+  // Restore whatever was on the board last time, once, before anything else
+  // touches the game. `restoring` gates the save effect below so the empty
+  // starting position doesn't overwrite the saved game on the way in.
+  const [restoring, setRestoring] = useState(true)
+  const { loadPgn } = game
+  useEffect(() => {
+    let cancelled = false
+
+    loadSession().then((session) => {
+      if (cancelled) return
+      if (session?.pgn) {
+        try {
+          loadPgn(session.pgn, session.ply)
+          if (session.source) setSource(session.source)
+          setTab('review')
+        } catch {
+          // A stored game we can no longer parse is not worth surfacing.
+        }
+      }
+      setRestoring(false)
+    })
+
+    return () => {
+      cancelled = true
+    }
+  }, [loadPgn])
+
+  const { getPgn } = game
+  useEffect(() => {
+    if (restoring) return
+    if (history.length === 0) {
+      clearSession()
+      return
+    }
+
+    // Debounced: walking a game with the arrow keys fires this on every ply.
+    const timer = setTimeout(() => saveSession({ pgn: getPgn(), ply, source }), 700)
+    return () => clearTimeout(timer)
+  }, [restoring, history.length, ply, source, getPgn])
+
   // A report describes an exact move sequence; any edit to the game voids it.
   useEffect(() => {
     if (review.report && review.report.plies.length !== history.length) review.clear()
   }, [history.length, review])
+
+  // ...but if this exact sequence was reviewed before, it comes straight back
+  // out of storage instead of costing another half-minute of search.
+  const { restore: restoreReview } = review
+  const sanSignature = game.sanList.join(' ')
+  useEffect(() => {
+    if (review.report || reviewRunning || history.length === 0) return
+    restoreReview(sanSignature ? sanSignature.split(' ') : [])
+  }, [sanSignature, review.report, reviewRunning, history.length, restoreReview])
 
   const reviewByPly = useMemo(() => {
     if (!review.report) return null
