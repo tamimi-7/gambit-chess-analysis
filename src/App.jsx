@@ -123,7 +123,11 @@ export default function App() {
           accuracy={review.report?.accuracy ?? null}
         />
 
-        <div className="lg:sticky lg:top-[4.75rem] lg:h-[calc(100dvh-6.5rem)]">
+        {/* The panel needs a definite height for `flex-1` inside it to have
+            anything to expand into — without one the move list collapses to a
+            couple of rows. Desktop gets the viewport minus the chrome; phones
+            get a fixed share of the screen and scroll the page to reach it. */}
+        <div className="h-[72dvh] lg:sticky lg:top-[4.75rem] lg:h-[calc(100dvh-6.5rem)]">
           <AnalysisPanel
             tab={tab}
             onTabChange={setTab}

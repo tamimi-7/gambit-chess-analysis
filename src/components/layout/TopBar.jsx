@@ -13,9 +13,9 @@ export default function TopBar({ engineStatus = 'idle', onImportPgn, onOpenPlaye
 
   return (
     <header className="sticky top-0 z-30 border-b border-slate-800/80 bg-slate-950/80 backdrop-blur-md">
-      <div className="mx-auto flex h-14 max-w-[1680px] items-center gap-4 px-4 sm:px-6">
-        {/* Brand */}
-        <div className="flex items-center gap-2.5">
+      <div className="mx-auto flex h-14 max-w-[1680px] items-center gap-2 px-3 sm:gap-4 sm:px-6">
+        {/* Brand — the subtitle is desktop-only, it costs width we need on phones. */}
+        <div className="flex shrink-0 items-center gap-2.5">
           <div className="grid size-8 place-items-center rounded-md bg-gradient-to-br from-accent-400 to-accent-600 text-[17px] leading-none text-slate-950 shadow-lg shadow-accent-600/20">
             <span className="-mt-px">♞</span>
           </div>
@@ -23,37 +23,43 @@ export default function TopBar({ engineStatus = 'idle', onImportPgn, onOpenPlaye
             <div className="text-[15px] font-semibold tracking-tight text-slate-100">
               Gambit
             </div>
-            <div className="label-micro mt-1">Analysis Board</div>
+            <div className="label-micro mt-1 hidden sm:block">Analysis Board</div>
           </div>
         </div>
 
         <div className="mx-1 hidden h-6 w-px bg-slate-800 sm:block" />
 
-        <nav className="hidden items-center gap-1 sm:flex">
-          <span className="rounded-md bg-slate-800 px-3 py-1.5 text-[13px] font-medium text-slate-100">
+        {/* The two ways into a game. These must stay reachable at every width —
+            without them a phone can only shuffle pieces by hand. */}
+        <nav className="flex min-w-0 items-center gap-1">
+          <span className="hidden rounded-md bg-slate-800 px-3 py-1.5 text-[13px] font-medium text-slate-100 sm:inline">
             Analysis
           </span>
           <button
             type="button"
             onClick={onOpenPlayer}
-            className="rounded-md px-3 py-1.5 text-[13px] font-medium text-slate-400 transition-colors hover:bg-slate-800/60 hover:text-slate-200"
+            className="shrink-0 rounded-md px-2 py-1.5 text-[13px] font-medium text-slate-400 transition-colors hover:bg-slate-800/60 hover:text-slate-200 sm:px-3"
           >
             chess.com
           </button>
           <button
             type="button"
             onClick={onImportPgn}
-            className="rounded-md px-3 py-1.5 text-[13px] font-medium text-slate-400 transition-colors hover:bg-slate-800/60 hover:text-slate-200"
+            className="shrink-0 rounded-md px-2 py-1.5 text-[13px] font-medium text-slate-400 transition-colors hover:bg-slate-800/60 hover:text-slate-200 sm:px-3"
           >
-            Import PGN
+            <span className="sm:hidden">PGN</span>
+            <span className="hidden sm:inline">Import PGN</span>
           </button>
         </nav>
 
-        {/* Engine status */}
-        <div className="ml-auto flex items-center gap-3">
-          <div className="flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/80 py-1.5 pl-2.5 pr-3">
+        {/* Engine status — collapses to a bare dot on phones. */}
+        <div className="ml-auto flex shrink-0 items-center gap-3">
+          <div
+            title={`Stockfish · ${status.label}`}
+            className="flex items-center gap-2 rounded-full border border-slate-800 bg-slate-900/80 px-2 py-1.5 sm:pl-2.5 sm:pr-3"
+          >
             <span className={`size-1.5 rounded-full ${status.dot}`} />
-            <span className="font-mono text-[11px] tracking-wide text-slate-400">
+            <span className="hidden font-mono text-[11px] tracking-wide text-slate-400 sm:inline">
               Stockfish&nbsp;·&nbsp;
               <span className="text-slate-200">{status.label}</span>
             </span>
